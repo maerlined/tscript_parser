@@ -1,0 +1,23 @@
+passage_id;speaker;sentence_idx;sentence
+1;Me;1;Hey, how are you doing today?
+1;Me;2;I hope everything's been going well.
+1;Me;3;I was wondering if you wanted to grab lunch sometime this week.
+1;Me;4;There's actually a couple of places I've been meaning to try.
+2;Them;1;I'm doing really well, thanks for asking.
+2;Them;2;Yes, that sounds like a great idea.
+2;Them;3;I'm free on Thursday and also Friday afternoon if that works better for you.
+2;Them;4;Either day suits me, so just let me know what's easier on your end.
+3;Me;1;Thursday works perfectly for me.
+3;Me;2;Should we try that new place on Fifth Street?
+3;Me;3;I walked past it last week and it looked really nice.
+3;Me;4;The menu in the window caught my eye, especially the lunch specials.
+4;Them;1;Oh yes, absolutely.
+4;Them;2;I heard it has amazing food and the reviews are fantastic.
+4;Them;3;My colleague went there last month and said the pasta was incredible.
+4;Them;4;Apparently the service is really good too, which is always a plus.
+5;Me;1;Great, let's meet there at noon.
+5;Me;2;I'll book a table in advance just to be safe.
+5;Me;3;It might get busy at lunchtime on a Thursday.
+6;Them;1;Perfect, I'll see you at noon on Thursday.
+6;Them;2;Can't wait! I'll send you a reminder the morning of.
+6;Them;3;Thanks so much for organising this, I've been looking forward to catching up.
