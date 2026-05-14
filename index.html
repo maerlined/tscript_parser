@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transcript Parser</title>
+<style>
+  :root {
+    --bg: #0e0e10; --panel: #17171b; --line: #2a2a32;
+    --text: #e8e8ea; --muted: #8a8a93; --accent: #7c9eff;
+    --ok: #5fd38d; --err: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+    font: 15px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    display: flex; justify-content: center; padding: 8vh 24px;
+  }
+  main { width: 100%; max-width: 560px; }
+  h1 { font-size: 1.7rem; margin: 0 0 .35rem; letter-spacing: -.01em; }
+  .sub { color: var(--muted); margin: 0 0 1.8rem; }
+  code { background: var(--panel); padding: .1em .4em; border-radius: 4px; font-size: .9em; }
+  #drop {
+    display: flex; flex-direction: column; align-items: center; gap: .35rem;
+    padding: 2.4rem 1rem; border: 1.5px dashed var(--line); border-radius: 12px;
+    background: var(--panel); cursor: pointer; text-align: center;
+    transition: border-color .15s, background .15s;
+  }
+  #drop:hover, #drop.over { border-color: var(--accent); background: #1c1c24; }
+  #drop span { font-weight: 600; color: var(--accent); }
+  #drop small { color: var(--muted); }
+  #results { list-style: none; padding: 0; margin: 1.4rem 0 0; display: grid; gap: .6rem; }
+  .row {
+    padding: .8rem 1rem; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 10px;
+  }
+  .head { display: flex; align-items: center; gap: .8rem; }
+  .info { flex: 1; min-width: 0; }
+  .preview {
+    margin: .7rem 0 0; padding: .6rem .7rem; max-height: 180px; overflow: auto;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 7px;
+    font: .78rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--muted); white-space: pre;
+  }
+  .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status { font-size: .85rem; color: var(--muted); }
+  .status.ok { color: var(--ok); }
+  .status.err { color: var(--err); }
+  button {
+    font: inherit; font-weight: 600; padding: .5rem .9rem; border-radius: 8px;
+    border: 1px solid var(--accent); background: var(--accent); color: #0e0e10;
+    cursor: pointer; white-space: nowrap;
+  }
+  button:disabled { opacity: .35; cursor: not-allowed; }
+  button:not(:disabled):hover { filter: brightness(1.1); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Transcript Parser</h1>
+  <p class="sub">Upload one or more <code>.txt</code> transcripts. Each is parsed
+  into a sentence-level CSV you can open in Google Sheets. Everything runs in
+  your browser — nothing is uploaded anywhere.</p>
+
+  <label id="drop" for="fileInput">
+    <input id="fileInput" type="file" accept=".txt,text/plain" multiple hidden>
+    <span>Upload files</span>
+    <small>or drag &amp; drop .txt files here</small>
+  </label>
+
+  <ul id="results"></ul>
+</main>
+
+<script>
+// --- parser (ported from parse_conversation.py) ---------------------------
+const TURN_RE = /^[ \t]*(Me|Them):\s*([\s\S]*?)(?=^[ \t]*(?:Me|Them):|$(?![\s\S]))/gm;
+const FIRST_SPEAKER_RE = /^[ \t]*(?:Me|Them):/m;
+const SENTENCE_RE = /(?<=[.!?])\s+/;
+
+function findTranscript(text) {
+  const m = text.match(FIRST_SPEAKER_RE);
+  if (!m) throw new Error("No transcript found in file");
+  return text.slice(m.index);
+}
+
+// Split a turn into sentences. Fragments under 3 words are merged into the
+// preceding sentence. Single-sentence turns are returned as-is.
+function splitSentences(raw) {
+  const cleaned = raw.replace(/\s+/g, " ").trim();
+  const parts = cleaned.split(SENTENCE_RE).map(s => s.trim()).filter(Boolean);
+  if (parts.length <= 1) return parts;
+
+  const result = [];
+  let pending = null;
+  for (let s of parts) {
+    if (pending !== null) { s = pending + " " + s; pending = null; }
+    if (s.split(/\s+/).length < 3) pending = s;
+    else result.push(s);
+  }
+  if (pending !== null) {
+    if (result.length) result[result.length - 1] += " " + pending;
+    else result.push(pending);
+  }
+  return result;
+}
+
+// Parse transcript text into rows: {passage_id, speaker, sentence_idx, sentence}.
+function parseText(text) {
+  const transcript = findTranscript(text);
+  const rows = [];
+  let passageId = 0;
+  for (const turn of transcript.matchAll(TURN_RE)) {
+    passageId++;
+    const speaker = turn[1];
+    splitSentences(turn[2]).forEach((sentence, i) => {
+      rows.push({ passage_id: passageId, speaker, sentence_idx: i + 1, sentence });
+    });
+  }
+  return rows;
+}
+
+// Semicolon-delimited CSV, matching the Python output's columns.
+function toCsv(rows) {
+  const cols = ["passage_id", "speaker", "sentence_idx", "sentence"];
+  const esc = v => {
+    const s = String(v);
+    return /[;"\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const lines = [cols.join(";")];
+  for (const r of rows) lines.push(cols.map(c => esc(r[c])).join(";"));
+  return lines.join("\n") + "\n";
+}
+
+// --- UI -------------------------------------------------------------------
+const drop = document.getElementById("drop");
+const input = document.getElementById("fileInput");
+const results = document.getElementById("results");
+
+const readText = file => new Promise((resolve, reject) => {
+  const fr = new FileReader();
+  fr.onload = () => resolve(fr.result);
+  fr.onerror = () => reject(fr.error);
+  fr.readAsText(file);
+});
+
+function download(name, csv) {
+  // Use a data: URI rather than a Blob object URL. The CSV is tiny (a few KB),
+  // and a data: URI carries the content inline in the href, so there is no
+  // separate blob object whose lifetime can be lost or revoked mid-download —
+  // which is what produced the 0 KB files.
+  const a = document.createElement("a");
+  a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function addRow(file, status, statusClass, csv, outName) {
+  const li = document.createElement("li");
+  li.className = "row";
+
+  const head = document.createElement("div");
+  head.className = "head";
+  head.innerHTML =
+    '<div class="info"><div class="name"></div>' +
+    '<div class="status ' + statusClass + '"></div></div>';
+  head.querySelector(".name").textContent = file.name;
+  head.querySelector(".status").textContent = status;
+
+  const btn = document.createElement("button");
+  btn.textContent = "Download .csv";
+  btn.disabled = !csv;
+  if (csv) btn.onclick = () => download(outName, csv);
+  head.appendChild(btn);
+  li.appendChild(head);
+
+  // Show the exact CSV content that the Download button will save, so it can
+  // be checked before downloading.
+  if (csv) {
+    const pre = document.createElement("pre");
+    pre.className = "preview";
+    pre.textContent = csv;
+    li.appendChild(pre);
+  }
+  results.appendChild(li);
+}
+
+async function handleFiles(fileList) {
+  results.innerHTML = "";
+  for (const file of fileList) {
+    const stem = file.name.replace(/\.[^./]+$/, "");
+    try {
+      const rows = parseText(await readText(file));
+      addRow(file, "Parsed " + rows.length + " rows", "ok",
+             toCsv(rows), stem + "_parsed.csv");
+    } catch (e) {
+      addRow(file, e.message, "err", null, null);
+    }
+  }
+}
+
+input.addEventListener("change", () => handleFiles(input.files));
+
+["dragenter", "dragover"].forEach(ev =>
+  drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev =>
+  drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => {
+  if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+});
+</script>
+</body>
+</html>
