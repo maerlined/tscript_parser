@@ -58,14 +58,14 @@
 <body>
 <main>
   <h1>Transcript Parser</h1>
-  <p class="sub">Upload one or more <code>.txt</code> transcripts. Each is parsed
-  into a sentence-level CSV you can open in Google Sheets. Everything runs in
-  your browser — nothing is uploaded anywhere.</p>
+  <p class="sub">Upload a <code>.txt</code> transcript. It's parsed into a
+  sentence-level CSV you can open in Google Sheets. Everything runs in your
+  browser — nothing is uploaded anywhere.</p>
 
   <label id="drop" for="fileInput">
-    <input id="fileInput" type="file" accept=".txt,text/plain" multiple hidden>
-    <span>Upload files</span>
-    <small>or drag &amp; drop .txt files here</small>
+    <input id="fileInput" type="file" accept=".txt,text/plain" hidden>
+    <span>Upload file</span>
+    <small>or drag &amp; drop a .txt file here</small>
   </label>
 
   <ul id="results"></ul>
@@ -144,19 +144,23 @@ const readText = file => new Promise((resolve, reject) => {
 });
 
 function download(name, csv) {
-  // Use a data: URI rather than a Blob object URL. The CSV is tiny (a few KB),
-  // and a data: URI carries the content inline in the href, so there is no
-  // separate blob object whose lifetime can be lost or revoked mid-download —
-  // which is what produced the 0 KB files.
+  // Proven FileSaver.js pattern. Earlier versions called a.remove() (and before
+  // that, revoked the object URL) synchronously right after the click — in
+  // Firefox that wedges the download subsystem so only the FIRST download per
+  // page load works and every one after it comes out 0 KB. The fix: a Blob
+  // object URL, defer the click by one tick, revoke the URL only long after the
+  // download has started, and never append/remove the anchor element.
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a");
-  a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
   a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  a.rel = "noopener";
+  a.href = URL.createObjectURL(blob);
+  setTimeout(() => a.dispatchEvent(new MouseEvent("click")), 0);
+  setTimeout(() => URL.revokeObjectURL(a.href), 40000);
 }
 
-function addRow(file, status, statusClass, csv, outName) {
+function showResult(file, status, statusClass, csv, outName) {
+  results.innerHTML = "";          // Single file: only ever one result on screen.
   const li = document.createElement("li");
   li.className = "row";
 
@@ -166,17 +170,23 @@ function addRow(file, status, statusClass, csv, outName) {
     '<div class="info"><div class="name"></div>' +
     '<div class="status ' + statusClass + '"></div></div>';
   head.querySelector(".name").textContent = file.name;
-  head.querySelector(".status").textContent = status;
+  const statusEl = head.querySelector(".status");
+  statusEl.textContent = status;
 
   const btn = document.createElement("button");
   btn.textContent = "Download .csv";
   btn.disabled = !csv;
-  if (csv) btn.onclick = () => download(outName, csv);
+  if (csv) btn.onclick = () => {
+    download(outName, csv);
+    // Confirm the save. Browsers expose no "save dialog finished" event, so
+    // this shows as soon as the download is handed off to the browser.
+    statusEl.textContent = "Download complete — saved as " + outName;
+    statusEl.className = "status ok";
+  };
   head.appendChild(btn);
   li.appendChild(head);
 
-  // Show the exact CSV content that the Download button will save, so it can
-  // be checked before downloading.
+  // Show the exact CSV content the Download button will save.
   if (csv) {
     const pre = document.createElement("pre");
     pre.className = "preview";
@@ -186,28 +196,28 @@ function addRow(file, status, statusClass, csv, outName) {
   results.appendChild(li);
 }
 
-async function handleFiles(fileList) {
-  results.innerHTML = "";
-  for (const file of fileList) {
-    const stem = file.name.replace(/\.[^./]+$/, "");
-    try {
-      const rows = parseText(await readText(file));
-      addRow(file, "Parsed " + rows.length + " rows", "ok",
-             toCsv(rows), stem + "_parsed.csv");
-    } catch (e) {
-      addRow(file, e.message, "err", null, null);
-    }
+async function handleFile(file) {
+  const stem = file.name.replace(/\.[^./]+$/, "");
+  const outName = stem + "_parsed.csv";
+  try {
+    const rows = parseText(await readText(file));
+    showResult(file, "Parsed " + rows.length + " rows", "ok", toCsv(rows), outName);
+  } catch (e) {
+    showResult(file, e.message, "err", null, null);
   }
 }
 
-input.addEventListener("change", () => handleFiles(input.files));
+input.addEventListener("change", async () => {
+  try { if (input.files[0]) await handleFile(input.files[0]); }
+  finally { input.value = ""; }   // let the same file be re-selected
+});
 
 ["dragenter", "dragover"].forEach(ev =>
   drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
 ["dragleave", "drop"].forEach(ev =>
   drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
 drop.addEventListener("drop", e => {
-  if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
 });
 </script>
 </body>
