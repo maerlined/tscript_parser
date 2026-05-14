@@ -10,3 +10,7 @@ parsed/*.csv
 # macOS
 .DS_Store
 
+# Claude Code (local agent config, not project source)
+CLAUDE.md
+.claude/
+
