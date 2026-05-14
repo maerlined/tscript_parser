@@ -1,0 +1,12 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Parsed output (generated files, not source)
+parsed/*.csv
+
+# macOS
+.DS_Store
+
