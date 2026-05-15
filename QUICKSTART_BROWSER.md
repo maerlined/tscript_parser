@@ -1,17 +1,19 @@
 ## How to use
 
 1. Drop a `.txt` transcript on the upload area above (or click **Upload file**).
-2. Check the preview that appears to confirm it parsed correctly.
+
+2. A preview appears showing the output (see formatting below)
+   **Example:** 1;Me;1;The first sentence appears here.;
 3. Click **Download .csv** to save `<filename>_parsed.csv`.
 
-The CSV is semicolon-delimited and ready to open in Google Sheets, Excel, or
-any other spreadsheet tool. Everything runs in your browser — nothing is
+The CSV is semicolon-delimited and ready to import in Google Sheets, Excel, or
+any other spreadsheet tool. Everything runs in your browser, nothing is
 uploaded anywhere.
 
 ## Input format
 
 A text file with `Me:` / `Them:` speaker turns. Any header above the first
-speaker line is ignored. A turn may span multiple (indented) lines.
+speaker line is ignored. A turn may span multiple lines.
 
 Example:
 

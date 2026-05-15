@@ -54,7 +54,7 @@
   button:disabled { opacity: .35; cursor: not-allowed; }
   button:not(:disabled):hover { filter: brightness(1.1); }
 
-  /* Rendered quickstart, fetched at runtime from quickstart.md */
+  /* Rendered quickstart, fetched at runtime from QUICKSTART_BROWSER.md */
   .sep { border: 0; border-top: 1px solid var(--line); margin: 2.5rem 0 1.4rem; }
   #quickstart h1 { font-size: 1.35rem; margin: 0 0 .6rem; letter-spacing: -.01em; }
   #quickstart h2 { font-size: 1.05rem; margin: 1.6rem 0 .5rem; }
@@ -242,7 +242,7 @@ drop.addEventListener("drop", e => {
 });
 
 // --- Quickstart rendering ------------------------------------------------
-// Tiny markdown renderer covering the features used in quickstart.md: headings,
+// Tiny markdown renderer covering the features used in QUICKSTART_BROWSER.md: headings,
 // paragraphs, bold, inline code, fenced code blocks, bullet + numbered lists,
 // links.
 function renderMarkdown(md) {
@@ -288,7 +288,17 @@ function renderMarkdown(md) {
       list.push(item);
       continue;
     }
-    if (!line.trim()) { flushPara(); flushList(); continue; }
+    // Indented non-blank line in list context: wrap onto the previous item.
+    if (listTag && /^\s+\S/.test(line)) {
+      list[list.length - 1] += " " + line.trim();
+      continue;
+    }
+    // Blank line: in a list, defer the flush so the list can resume on the
+    // next item; outside a list, it ends the current paragraph.
+    if (!line.trim()) {
+      if (!listTag) flushPara();
+      continue;
+    }
     flushList();
     para.push(line.trim());
   }
@@ -297,8 +307,8 @@ function renderMarkdown(md) {
 }
 
 // Best-effort: fetch the quickstart and render it. Silently no-ops if
-// quickstart.md can't be fetched (e.g. opening index.html directly via file://).
-fetch("quickstart.md").then(r => r.ok ? r.text() : null).then(md => {
+// QUICKSTART_BROWSER.md can't be fetched (e.g. opening index.html directly via file://).
+fetch("QUICKSTART_BROWSER.md").then(r => r.ok ? r.text() : null).then(md => {
   if (md) document.getElementById("quickstart").innerHTML = renderMarkdown(md);
 }).catch(() => {});
 </script>
