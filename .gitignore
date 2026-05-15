@@ -5,8 +5,8 @@ __pycache__/
 *.pyo
 
 # Parsed output (generated files, not source) — keep sample_parsed.csv as an example
-parsed/*.csv
-!parsed/sample_parsed.csv
+run-with-python/parsed/*.csv
+!run-with-python/parsed/sample_parsed.csv
 
 # macOS
 .DS_Store
