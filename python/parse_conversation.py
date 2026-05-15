@@ -81,6 +81,7 @@ def main():
 
     df = parse_conversation(input_path)
     print(df.to_string(index=False))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(output_path, sep=";", index=False)
     print(f"\nSaved {len(df)} rows -> {output_path}")
 
