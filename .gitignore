@@ -12,4 +12,5 @@ parsed/*.csv
 
 # Local Claude Code instructions (not part of the repo)
 CLAUDE.md
+.claude/
 
