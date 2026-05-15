@@ -10,8 +10,11 @@ Two equivalent versions live in this repo:
 
 ## Browser version
 
-Open `index.html` in a browser, drop a `.txt` transcript on the upload area,
-and click **Download .csv**.
+Open `index.html` in a browser, then:
+
+1. Drop a `.txt` transcript on the upload area (or click **Upload file**).
+2. Check the preview that appears to confirm it parsed correctly.
+3. Click **Download .csv** to save `<filename>_parsed.csv`.
 
 Best run in **Chrome or Chromium**. Firefox has a quirk where repeated downloads
 in the same tab can come out 0 KB; reloading the page works around it, but
@@ -41,7 +44,14 @@ A text file with `Me:` / `Them:` speaker turns. Any header above the first
 speaker line is ignored. A turn may span multiple (indented) lines. See
 `run-with-python/input_data/sample.txt` for an example.
 
-## Example output
+## Output
+
+The CSV has four columns:
+
+- `passage_id` — increments by 1 per speaker turn
+- `speaker` — `Me` or `Them`
+- `sentence_idx` — sentence number within the turn (resets at 1)
+- `sentence` — the sentence text
 
 `run-with-python/parsed/sample_parsed.csv` is checked in as a reference of the
 expected output for `run-with-python/input_data/sample.txt`. Other files in
