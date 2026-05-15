@@ -18,6 +18,16 @@ python3 parse_conversation.py input_data/sample.txt
 This prints the parsed table and writes `parsed/sample_parsed.csv`
 (semicolon-delimited).
 
+## Browser version
+
+`index.html` is a self-contained version of the same parser — just open it in a
+browser, drop a `.txt` transcript on the upload area, and click **Download .csv**.
+No install, no server, no Python.
+
+Best run in **Chrome or Chromium**. Firefox has a quirk where repeated downloads
+in the same tab can come out 0 KB; reloading the page works around it, but
+Chrome is smoother.
+
 ## Input format
 
 A text file with `Me:` / `Them:` speaker turns. Any header above the first

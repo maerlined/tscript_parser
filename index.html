@@ -144,18 +144,19 @@ const readText = file => new Promise((resolve, reject) => {
 });
 
 function download(name, csv) {
-  // Proven FileSaver.js pattern. Earlier versions called a.remove() (and before
-  // that, revoked the object URL) synchronously right after the click — in
-  // Firefox that wedges the download subsystem so only the FIRST download per
-  // page load works and every one after it comes out 0 KB. The fix: a Blob
-  // object URL, defer the click by one tick, revoke the URL only long after the
-  // download has started, and never append/remove the anchor element.
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  // Append the anchor to the document, trigger a real .click(), and tear it
+  // down only on a delay. The detached-anchor + synthetic-dispatchEvent pattern
+  // ("modern FileSaver") works in Chromium but fails in Firefox here — the
+  // first download per page load works, every one after it comes out 0 KB.
+  // This attached-anchor variant was confirmed working on repeated downloads
+  // in Firefox via download-test.html (Method B).
   const a = document.createElement("a");
   a.download = name;
   a.rel = "noopener";
-  a.href = URL.createObjectURL(blob);
-  setTimeout(() => a.dispatchEvent(new MouseEvent("click")), 0);
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => a.remove(), 2000);
   setTimeout(() => URL.revokeObjectURL(a.href), 40000);
 }
 
