@@ -4,6 +4,10 @@ __pycache__/
 *.pyc
 *.pyo
 
+# Input transcripts — keep sample.txt as the example, ignore others
+run-with-python/input_data/*.txt
+!run-with-python/input_data/sample.txt
+
 # Parsed output (generated files, not source) — keep sample_parsed.csv as an example
 run-with-python/parsed/*.csv
 !run-with-python/parsed/sample_parsed.csv
