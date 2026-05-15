@@ -10,3 +10,6 @@ parsed/*.csv
 # macOS
 .DS_Store
 
+# Local Claude Code instructions (not part of the repo)
+CLAUDE.md
+
