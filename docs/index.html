@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transcript parser</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    background: #111;
+    color: #eee;
+    font-family: system-ui, -apple-system, sans-serif;
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    box-sizing: border-box;
+  }
+  main {
+    width: 100%;
+    max-width: 32rem;
+  }
+  h1 {
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin: 0 0 1.5rem;
+  }
+  #drop {
+    border: 2px dashed #444;
+    border-radius: 0.5rem;
+    padding: 2.5rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    color: #888;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  #drop:hover, #drop.over { border-color: #6aa9ff; color: #ccc; }
+  #status { margin: 1rem 0 0; min-height: 1.25rem; color: #888; }
+  #download {
+    display: none;
+    margin-top: 1rem;
+    color: #6aa9ff;
+    text-decoration: underline;
+  }
+  #download:hover { color: #9cc4ff; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Transcript parser</h1>
+  <div id="drop">Drop a .txt transcript here, or click to pick one</div>
+  <input id="picker" type="file" accept=".txt,text/plain" hidden>
+  <p id="status"></p>
+  <a id="download" download>Download CSV</a>
+</main>
+<script>
+const TURN_RE = /^[ \t]*(Me|Them):\s*([\s\S]*?)(?=^[ \t]*(?:Me|Them):|(?![\s\S]))/gm;
+const SENTENCE_RE = /(?<=[.!?])\s+/;
+
+function findTranscript(text) {
+  const m = text.match(/^[ \t]*(Me|Them):/m);
+  if (!m) throw new Error("No transcript found in file");
+  return text.slice(m.index);
+}
+
+function splitSentences(raw) {
+  const cleaned = raw.replace(/\s+/g, " ").trim();
+  const parts = cleaned.split(SENTENCE_RE).map(s => s.trim()).filter(Boolean);
+  if (parts.length <= 1) return parts;
+  const result = [];
+  let pending = null;
+  for (let s of parts) {
+    if (pending !== null) { s = pending + " " + s; pending = null; }
+    if (s.split(/\s+/).length < 3) pending = s;
+    else result.push(s);
+  }
+  if (pending !== null) {
+    if (result.length) result[result.length - 1] += " " + pending;
+    else result.push(pending);
+  }
+  return result;
+}
+
+function parseConversation(text) {
+  const transcript = findTranscript(text);
+  const rows = [];
+  let passageId = 0;
+  TURN_RE.lastIndex = 0;
+  let m;
+  while ((m = TURN_RE.exec(transcript)) !== null) {
+    passageId++;
+    const speaker = m[1];
+    const sentences = splitSentences(m[2]);
+    sentences.forEach((sentence, i) => {
+      rows.push([passageId, speaker, i + 1, sentence]);
+    });
+  }
+  return rows;
+}
+
+function csvCell(value) {
+  const s = String(value);
+  if (s.includes(";") || s.includes("\n") || s.includes("\r") || s.includes('"')) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function toCsv(rows) {
+  const header = "passage_id;speaker;sentence_idx;sentence";
+  const body = rows.map(r => r.map(csvCell).join(";")).join("\n");
+  return header + "\n" + body + "\n";
+}
+
+const drop = document.getElementById("drop");
+const picker = document.getElementById("picker");
+const status = document.getElementById("status");
+const download = document.getElementById("download");
+
+drop.addEventListener("click", () => picker.click());
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => {
+  e.preventDefault();
+  drop.classList.remove("over");
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+picker.addEventListener("change", () => {
+  if (picker.files[0]) handleFile(picker.files[0]);
+});
+
+let lastUrl = null;
+
+async function handleFile(file) {
+  status.textContent = "Parsing " + file.name + "...";
+  download.style.display = "none";
+  try {
+    const text = await file.text();
+    const rows = parseConversation(text);
+    const csv = toCsv(rows);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    if (lastUrl) URL.revokeObjectURL(lastUrl);
+    lastUrl = URL.createObjectURL(blob);
+    const stem = file.name.replace(/\.[^.]+$/, "");
+    download.href = lastUrl;
+    download.download = stem + "_parsed.csv";
+    download.style.display = "inline-block";
+    status.textContent = "Parsed " + rows.length + " sentences.";
+  } catch (err) {
+    status.textContent = "Error: " + err.message;
+  }
+}
+</script>
+</body>
+</html>
