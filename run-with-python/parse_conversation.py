@@ -70,19 +70,46 @@ def parse_conversation(filepath) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=cols)
 
 
-def main():
-    """Parse the given transcript and write parsed/<stem>_parsed.csv."""
-    if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <conversation.txt>", file=sys.stderr)
-        sys.exit(1)
+INPUT_DIR = Path("input_data")
+OUTPUT_DIR = Path("parsed")
 
-    input_path = Path(sys.argv[1])
-    output_path = Path("parsed") / (input_path.stem + "_parsed.csv")
 
+def parse_one(input_path: Path, *, verbose: bool = True) -> None:
+    """Parse one transcript and write parsed/<stem>_parsed.csv."""
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    output_path = OUTPUT_DIR / (input_path.stem + "_parsed.csv")
     df = parse_conversation(input_path)
-    print(df.to_string(index=False))
+    if verbose:
+        print(df.to_string(index=False))
+        print()
     df.to_csv(output_path, sep=";", index=False)
-    print(f"\nSaved {len(df)} rows -> {output_path}")
+    print(f"Saved {len(df)} rows -> {output_path}")
+
+
+def run_batch() -> None:
+    """Parse every input_data/*.txt that doesn't yet have a parsed/<stem>_parsed.csv."""
+    if not INPUT_DIR.is_dir():
+        print(f"{INPUT_DIR}/ not found (run from inside run-with-python/)", file=sys.stderr)
+        sys.exit(1)
+    todo = sorted(p for p in INPUT_DIR.glob("*.txt")
+                  if not (OUTPUT_DIR / (p.stem + "_parsed.csv")).exists())
+    if not todo:
+        print(f"Nothing to do — every {INPUT_DIR}/*.txt already has a {OUTPUT_DIR}/<stem>_parsed.csv.")
+        return
+    print(f"Parsing {len(todo)} file(s):")
+    for p in todo:
+        parse_one(p, verbose=False)
+
+
+def main():
+    """Parse a single transcript, or — with no args — every unparsed input_data/*.txt."""
+    if len(sys.argv) == 1:
+        run_batch()
+        return
+    if len(sys.argv) != 2:
+        print(f"Usage: {sys.argv[0]} [conversation.txt]", file=sys.stderr)
+        sys.exit(1)
+    parse_one(Path(sys.argv[1]))
 
 
 if __name__ == "__main__":

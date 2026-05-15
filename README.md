@@ -27,19 +27,26 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install pandas
 
-# Parse a transcript
+# Parse one transcript
 python3 parse_conversation.py input_data/sample.txt
+
+# Or, with no arguments: parse every input_data/*.txt that doesn't yet have
+# a matching parsed/<stem>_parsed.csv (skips files already parsed).
+python3 parse_conversation.py
 ```
 
-Prints the parsed table and writes `parsed/<stem>_parsed.csv`
-(semicolon-delimited). Run from inside `run-with-python/` — the script writes
-output relative to the current directory.
+Both modes write `parsed/<stem>_parsed.csv` (semicolon-delimited). Run from
+inside `run-with-python/` — paths are relative to the current directory.
 
 ## Input format
 
 A text file with `Me:` / `Them:` speaker turns. Any header above the first
 speaker line is ignored. A turn may span multiple (indented) lines. See
 `run-with-python/input_data/sample.txt` for an example.
+
+Drop your own transcripts into `run-with-python/input_data/` and they'll be
+picked up by the no-argument batch mode. Only `sample.txt` is checked in;
+other files in that folder are git-ignored.
 
 ## Example output
 
