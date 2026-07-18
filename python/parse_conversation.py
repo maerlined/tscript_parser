@@ -6,8 +6,10 @@ from pathlib import Path
 import pandas as pd
 
 # Matches a full speaker turn (Me/Them) including any indented continuation lines.
+# The speaker label may optionally be followed by a space and a bracketed
+# timestamp, e.g. "Me [12:34]:" or "Them [00:08:17]:".
 TURN_RE = re.compile(
-    r'^[ \t]*(Me|Them):\s*(.*?)(?=^[ \t]*(?:Me|Them):|\Z)',
+    r'^[ \t]*(Me|Them)(?: +\[[^\]]*\])?:\s*(.*?)(?=^[ \t]*(?:Me|Them)(?: +\[[^\]]*\])?:|\Z)',
     re.MULTILINE | re.DOTALL,
 )
 
@@ -17,7 +19,7 @@ SENTENCE_RE = re.compile(r'(?<=[.!?])\s+')
 
 def find_transcript(text: str) -> str:
     """Return text starting from the first speaker line, skipping any header."""
-    m = re.search(r'^[ \t]*(Me|Them):', text, re.MULTILINE)
+    m = re.search(r'^[ \t]*(Me|Them)(?: +\[[^\]]*\])?:', text, re.MULTILINE)
     if not m:
         raise ValueError("No transcript found in file")
     return text[m.start():]
