@@ -56,11 +56,13 @@
   <a id="download" download>Download CSV</a>
 </main>
 <script>
-const TURN_RE = /^[ \t]*(Me|Them):\s*([\s\S]*?)(?=^[ \t]*(?:Me|Them):|(?![\s\S]))/gm;
+// The speaker label may optionally be followed by a space and a bracketed
+// timestamp, e.g. "Me [12:34]:" or "Them [00:08:17]:".
+const TURN_RE = /^[ \t]*(Me|Them)(?: +\[[^\]]*\])?:\s*([\s\S]*?)(?=^[ \t]*(?:Me|Them)(?: +\[[^\]]*\])?:|(?![\s\S]))/gm;
 const SENTENCE_RE = /(?<=[.!?])\s+/;
 
 function findTranscript(text) {
-  const m = text.match(/^[ \t]*(Me|Them):/m);
+  const m = text.match(/^[ \t]*(Me|Them)(?: +\[[^\]]*\])?:/m);
   if (!m) throw new Error("No transcript found in file");
   return text.slice(m.index);
 }
