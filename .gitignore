@@ -7,6 +7,9 @@ __pycache__/
 # Parsed output (generated files, not source)
 **/parsed/*.csv
 
+# Raw input transcripts (personal data, not source)
+raw/
+
 # macOS
 .DS_Store
 
